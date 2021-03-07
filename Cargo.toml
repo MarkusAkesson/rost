@@ -1,0 +1,24 @@
+[package]
+name = "rost"
+version = "0.1.0"
+authors = ["Markus Åkesson <macke.95_06@hotmail.com>"]
+edition = "2018"
+build = "build.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+riscv-rt = "0.8.0"
+riscv = "0.6.0"
+panic-halt = "0.2.0"
+volatile = "0.2.6"
+spin = "0.5.2"
+num_enum_derive = "0.5.1"
+log = "0.4.11"
+
+[dependencies.lazy_static]
+version = "1.0"
+features = ["spin_no_std"]
+
+[profile.release]
+lto = true
+codegen-units = 1
