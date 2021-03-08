@@ -38,16 +38,16 @@ extern "C" fn machine_trap() {
     let hart = register::mhartid::read();
     let sstatus = register::sstatus::read();
 
-    let is_async = scause.is_interrupt();
+    let is_interrupt = scause.is_interrupt();
     let cause = scause.code();
 
-    if is_async {
+    if is_interrupt {
         // handle device interrupt
         match cause {
             _ => warn!("Unhandled async trap CPU#{} -> {}\n", hart, cause),
         }
     } else {
-        // handle synchronous interrupt
+        // handle synchronous interrupt or exception
         match cause {
             _ => panic!(
                 "Unhandled sync trap {}. CPU#{} -> 0x{:08x}: 0x{:08x}\n",
