@@ -1,7 +1,7 @@
 use crate::arch;
 use crate::println;
 
-use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
+use log::{LevelFilter, Metadata, Record, SetLoggerError};
 
 static LOGGER: KernelLogger = KernelLogger;
 
@@ -13,7 +13,7 @@ pub fn init(max_level: LevelFilter) -> Result<(), SetLoggerError> {
 
 impl log::Log for KernelLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Info
+        metadata.level() <= log::max_level()
     }
 
     fn log(&self, record: &Record) {
