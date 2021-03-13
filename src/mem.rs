@@ -42,7 +42,8 @@ pub unsafe fn init() {
     info!("Memory Initiated");
 }
 
-fn enable_mmu() {
+pub fn enable_mmu() {
+    info!("Enabling mmu");
     let root_ppn = &KERNEL_PAGE_TABLE as *const PageTable as usize;
     let satp_val = arch::riscv::build_satp(8, 0, root_ppn);
     unsafe {
