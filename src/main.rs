@@ -3,12 +3,11 @@
 #![feature(global_asm)]
 #![feature(asm)]
 
-use rost::arch;
 use rost::klog;
 use rost::mem;
 use rost::uart;
 
-use log::{info, LevelFilter};
+use log::{info, trace, LevelFilter};
 
 use riscv::asm::*;
 use riscv::register::*;
@@ -36,9 +35,16 @@ _goto_supervised:
 
 /// Initiates the kernel
 ///
-/// Go to supervised mode
+/// Go to supervised mode when initialization is done
 #[no_mangle]
 fn kinit() {
+    unsafe {
+        mem::init();
+    }
+    mem::enable_mmu();
+
+    info!("Setup done");
+
     unsafe {
         mstatus::set_mpp(mstatus::MPP::Supervisor);
         mepc::write(kmain as usize);
@@ -48,17 +54,12 @@ fn kinit() {
     }
 }
 
-/// Runs the main kernel routines
+/// Kernel main
+/// Never returns.
 #[no_mangle]
 fn kmain() -> ! {
-    unsafe {
-        mem::init();
-    }
-
-    info!("Setup done");
-
-    rost::symbols::dump_symbols();
-
+    trace!("Entering kmain");
+    // rost::symbols::dump_symbols();
     loop {
         unsafe {
             wfi();
@@ -68,7 +69,8 @@ fn kmain() -> ! {
 
 /// Entrypoint for the rust code.
 ///
-/// The assembly code jumps here.
+/// Setup kernel logger and initate uart.
+/// Never returns
 #[entry]
 fn kentry() -> ! {
     klog::init(LevelFilter::Trace).expect("Failed to setup logger");
