@@ -1,5 +1,6 @@
 use crate::arch;
 use crate::page::{self, Attribute, PageTable, KERNEL_PAGE_TABLE};
+use crate::plic::PLIC_BASE;
 use crate::symbols::*;
 use crate::uart;
 
@@ -39,6 +40,11 @@ pub unsafe fn init() {
 
     info!("Mapping the kernel");
     pgtable.id_map_ranges(regions);
+    pgtable.id_map_range(
+        PLIC_BASE,
+        PLIC_BASE + 0x40_0000,
+        Attribute::ReadWrite as usize,
+    );
     info!("Memory Initiated");
 }
 
