@@ -2,7 +2,9 @@ use core::convert::TryInto;
 use core::fmt::Error;
 use core::fmt::Write;
 
-pub const UART_BASE_ADDR: usize = 0x1000_0000;
+use log::debug;
+
+pub const UART_BASE_ADDR: usize = 0x1_000_0000;
 
 #[macro_export]
 macro_rules! print {
@@ -117,6 +119,18 @@ impl Uart {
                 // The DR bit is 1, meaning data!
                 Some(ptr.add(0).read_volatile())
             }
+        }
+    }
+}
+
+pub fn uart_interrupt() {
+    let mut uart = Uart::new(UART_BASE_ADDR);
+    if let Some(c) = uart.get() {
+        drop(uart);
+        match c {
+            8 => print!("{} {}", 8 as char, 8 as char),
+            10 | 13 => println!(),
+            _ => print!("{}", c as char),
         }
     }
 }

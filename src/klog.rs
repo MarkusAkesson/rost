@@ -22,7 +22,7 @@ impl log::Log for KernelLogger {
             let sec = uptime.as_secs();
             let ms = uptime.as_micros();
             println!(
-                "[{:5}:{:0>6}][{}] {}",
+                "[{:5}.{:0>6}][{}] {}",
                 sec,
                 ms,
                 record.level(),

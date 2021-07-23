@@ -3,8 +3,13 @@
 #![feature(global_asm)]
 #![feature(asm)]
 
+use core::sync::atomic::{AtomicBool, Ordering};
+
+use rost::arch;
 use rost::klog;
 use rost::mem;
+use rost::plic;
+use rost::trap;
 use rost::uart;
 
 use log::{info, trace, LevelFilter};
@@ -13,20 +18,18 @@ use riscv::asm::*;
 use riscv::register::*;
 use riscv_rt::entry;
 
+static BOOT: AtomicBool = AtomicBool::new(false);
+
 extern "C" {
-    fn _goto_supervised();
+    fn goto_supervised();
 }
 
 global_asm!(
     r#"
-.global _goto_supervised
+.global goto_supervised
 .align 4
-_goto_supervised:
+goto_supervised:
     csrw satp, zero
-    li t0, 0xffff
-    csrw medeleg, t0
-    li t0, 0xffff
-    csrw mideleg, t0
     csrr a1, mhartid
     mv tp, a1
     mret
@@ -40,17 +43,18 @@ _goto_supervised:
 fn kinit() {
     unsafe {
         mem::init();
+        plic::init();
+        mem::enable_mmu();
+        trap::hartinit();
     }
-    mem::enable_mmu();
+    plic::hartinit();
 
     info!("Setup done");
 
     unsafe {
         mstatus::set_mpp(mstatus::MPP::Supervisor);
         mepc::write(kmain as usize);
-        _goto_supervised();
-
-        // setup timer/clock
+        goto_supervised();
     }
 }
 
@@ -59,12 +63,39 @@ fn kinit() {
 #[no_mangle]
 fn kmain() -> ! {
     trace!("Entering kmain");
-    // rost::symbols::dump_symbols();
+    // Release the other HARTs
+    //BOOT.store(true, Ordering::Relaxed);
+    unsafe {
+        // enable interrupts
+        riscv::register::sstatus::set_sie();
+        sstatus::set_spp(sstatus::SPP::Supervisor);
+        // enable software interrupt
+        riscv::register::sie::set_ssoft();
+        riscv::register::sie::set_sext();
+        // trigger a software interrupt
+        //riscv::mriv::set_sw_interrupt();
+    }
+    if arch::riscv::intr_get() {
+        info!("intr on");
+    } else {
+        info!("interrupt disabled");
+    }
+
     loop {
         unsafe {
             wfi();
         }
     }
+}
+
+fn hartinit() {
+    info!("Booting hart {}", mhartid::read());
+    mem::enable_mmu();
+    plic::hartinit();
+    unsafe {
+        trap::hartinit();
+    }
+    kmain();
 }
 
 /// Entrypoint for the rust code.
@@ -73,14 +104,18 @@ fn kmain() -> ! {
 /// Never returns
 #[entry]
 fn kentry() -> ! {
-    klog::init(LevelFilter::Trace).expect("Failed to setup logger");
-    uart::Uart::new(uart::UART_BASE_ADDR).init();
+    if mhartid::read() == 0 {
+        klog::init(LevelFilter::Trace).expect("Failed to setup logger");
+        uart::Uart::new(uart::UART_BASE_ADDR).init();
 
-    info!("Booting Rost ...");
-    info!("Current hart: {}", mhartid::read());
+        info!("Booting Rost ...");
+        info!("Current hart: {}", mhartid::read());
 
-    kinit();
-
+        kinit();
+    } else {
+        while !BOOT.load(Ordering::Relaxed) {}
+        hartinit();
+    }
     loop {
         unsafe {
             wfi();

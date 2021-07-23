@@ -26,3 +26,14 @@ fn rdtime() -> usize {
     unsafe { asm!("rdtime {}", out(reg) x) };
     x
 }
+
+/// Check if interrupt is enabled
+pub fn intr_get() -> bool {
+    riscv::register::sstatus::read().sie()
+}
+
+pub fn thread_pointer() -> usize {
+    let mut hart_id: usize;
+    unsafe { asm!("mv {}, tp", out(reg) hart_id) }
+    hart_id
+}

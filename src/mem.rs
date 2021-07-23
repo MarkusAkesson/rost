@@ -36,15 +36,15 @@ pub unsafe fn init() {
             uart::UART_BASE_ADDR,
             Attribute::ReadWrite as usize,
         ),
+        (
+            PLIC_BASE,
+            PLIC_BASE + 0x400_0000,
+            Attribute::ReadWrite as usize,
+        ),
     ];
 
     info!("Mapping the kernel");
     pgtable.id_map_ranges(regions);
-    pgtable.id_map_range(
-        PLIC_BASE,
-        PLIC_BASE + 0x40_0000,
-        Attribute::ReadWrite as usize,
-    );
     info!("Memory Initiated");
 }
 

@@ -1,4 +1,7 @@
-use log::warn;
+use crate::arch;
+use crate::interrupt;
+
+use log::{trace, warn};
 use riscv::register;
 
 #[derive(Debug, Copy, Clone)]
@@ -32,29 +35,94 @@ pub enum Trap {
 
 #[no_mangle]
 extern "C" fn machine_trap() {
-    let sepc = register::sepc::read();
-    let stval = register::stval::read();
-    let scause = register::scause::read();
+    let epc = register::mepc::read();
+    let tval = register::mtval::read();
+    let cause = register::mcause::read();
     let hart = register::mhartid::read();
-    let sstatus = register::sstatus::read();
+    let status = register::mstatus::read();
+    let mut sstatus_bits: usize;
+    unsafe {
+        asm!("csrr {}, mstatus", out(reg) sstatus_bits);
+    }
 
-    let is_interrupt = scause.is_interrupt();
-    let cause = scause.code();
+    let is_interrupt = cause.is_interrupt();
+    let cause = cause.code();
+
+    if status.spp() != register::mstatus::SPP::Supervisor {
+        warn!("not from supervisor mode,  hart {}", hart);
+    }
+    unsafe {
+        register::mstatus::clear_sie();
+    }
+
+    if arch::riscv::intr_get() {
+        panic!("interrupt not disabled");
+    }
 
     if is_interrupt {
-        // handle device interrupt
-        match cause {
-            _ => warn!("Unhandled async trap CPU#{} -> {}\n", hart, cause),
-        }
+        trace!("is interrupt");
+        // handle device interrupt from PLIC
+        interrupt::handle_interrupt(cause as u32);
     } else {
+        trace!("is exception");
         // handle synchronous interrupt or exception
         match cause {
+            0 => warn!(
+                "Instruction address misaligned CPU#{} -> 0x{:08x}: 0x{:08x}",
+                hart, epc, tval
+            ),
+            1 => panic!("Instruction access fault CPU#{}", hart),
+            2 => panic!(
+                "Illegal instruction CPU#{} -> 0x{:08x}: 0x{:08x}",
+                hart, epc, tval
+            ),
+            3 => panic!("Breakpoint CPU#{}", hart),
+            4 => panic!("Load address misaligned CPU#{}", hart),
+            5 => panic!("Load access fault CPU#{}", hart),
+            8 => panic!(
+                "Enviroment call from user mode CPU#{} -> 0x{:08x}",
+                hart, epc
+            ),
+            9 => panic!(
+                "Enviroment call from Supervisor mode CPU#{} -> 0x{:08x}",
+                hart, epc
+            ),
+            11 => panic!(
+                "Enviroment call from Machine mode CPU#{} -> 0x{:08x}",
+                hart, epc
+            ),
+            12 => panic!(
+                "Instruction Page fault CPU#{} -> 0x{:08x}: 0x{:08x}",
+                hart, epc, tval
+            ),
+            13 => panic!(
+                "Load Page fault CPU#{} -> 0x{:08x}: 0x{:08x}",
+                hart, epc, tval
+            ),
+            15 => panic!(
+                "Store Page fault CPU#{} -> 0x{:08x}: 0x{:08x}",
+                hart, epc, tval
+            ),
             _ => panic!(
-                "Unhandled sync trap {}. CPU#{} -> 0x{:08x}: 0x{:08x}\n",
-                cause, hart, sepc, stval
+                "Unhandled sync trap {}. CPU#{} -> 0x{:08x}: 0x{:08x}",
+                cause, hart, epc, tval
             ),
         }
     }
+
+    unsafe {
+        register::mstatus::set_sie();
+    }
+
+    register::sepc::write(epc);
+    unsafe {
+        asm!("csrw sstatus, {}", in(reg) sstatus_bits);
+    }
+}
+
+pub unsafe fn hartinit() {
+    register::stvec::write(_start_trap as usize, register::stvec::TrapMode::Direct);
+    register::mtvec::write(_start_trap as usize, register::stvec::TrapMode::Direct);
 }
 
 extern "C" {
@@ -135,6 +203,6 @@ _start_trap:
 
     addi sp, sp, 256
 
-    sret
+    mret
 "#
 );
