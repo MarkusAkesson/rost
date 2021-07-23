@@ -2,7 +2,6 @@ use crate::plic::{self, InterruptId};
 use crate::uart::uart_interrupt;
 
 use log::error;
-use riscv_rt::TrapFrame;
 
 /// Handle an interrupt from PLIC
 ///
@@ -25,9 +24,6 @@ fn timer_interrupt() {
 
 #[no_mangle]
 pub fn handle_interrupt(code: u32) {
-    //pub fn DefaultHandler(trap_frame: &TrapFrame) {
-    //let mcause = riscv::register::mcause::read();
-    //let code = mcause.code();
     match code {
         9 => plic_interrupt(),
         1 => timer_interrupt(),

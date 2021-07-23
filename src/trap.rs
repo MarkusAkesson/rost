@@ -60,14 +60,12 @@ extern "C" fn machine_trap() {
     }
 
     if is_interrupt {
-        trace!("is interrupt");
         // handle device interrupt from PLIC
         interrupt::handle_interrupt(cause as u32);
     } else {
-        trace!("is exception");
         // handle synchronous interrupt or exception
         match cause {
-            0 => warn!(
+            0 => panic!(
                 "Instruction address misaligned CPU#{} -> 0x{:08x}: 0x{:08x}",
                 hart, epc, tval
             ),

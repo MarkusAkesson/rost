@@ -5,14 +5,13 @@
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use rost::arch;
 use rost::klog;
 use rost::mem;
 use rost::plic;
 use rost::trap;
 use rost::uart;
 
-use log::{info, trace, LevelFilter};
+use log::{info, LevelFilter};
 
 use riscv::asm::*;
 use riscv::register::*;
@@ -49,7 +48,7 @@ fn kinit() {
     }
     plic::hartinit();
 
-    info!("Setup done");
+    info!("Setup done, jumping to supervisor mode");
 
     unsafe {
         mstatus::set_mpp(mstatus::MPP::Supervisor);
@@ -62,9 +61,9 @@ fn kinit() {
 /// Never returns.
 #[no_mangle]
 fn kmain() -> ! {
-    trace!("Entering kmain");
     // Release the other HARTs
     //BOOT.store(true, Ordering::Relaxed);
+    info!("Enabling interrutps");
     unsafe {
         // enable interrupts
         riscv::register::sstatus::set_sie();
@@ -72,13 +71,6 @@ fn kmain() -> ! {
         // enable software interrupt
         riscv::register::sie::set_ssoft();
         riscv::register::sie::set_sext();
-        // trigger a software interrupt
-        //riscv::mriv::set_sw_interrupt();
-    }
-    if arch::riscv::intr_get() {
-        info!("intr on");
-    } else {
-        info!("interrupt disabled");
     }
 
     loop {
