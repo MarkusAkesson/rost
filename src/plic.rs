@@ -3,8 +3,8 @@
 // VIRTIO: 1..8
 // UART0: 10
 // PCIE: 32..35
-//
-use log::{info, trace};
+
+use log::info;
 
 // PLIC mmio registers
 pub const PLIC_BASE: usize = 0x0c00_0000;
@@ -194,7 +194,6 @@ pub unsafe fn init() {
     info!("Initating PLIC");
     let plic = plic();
     plic.init(InterruptId::Uart0);
-    trace!("PLIC initiated");
 }
 
 /// Initiate the plic for the current HART
