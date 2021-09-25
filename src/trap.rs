@@ -1,7 +1,7 @@
 use crate::arch;
 use crate::interrupt;
 
-use log::{trace, warn};
+use log::warn;
 use riscv::register;
 
 #[derive(Debug, Copy, Clone)]
@@ -51,6 +51,7 @@ extern "C" fn machine_trap() {
     if status.spp() != register::mstatus::SPP::Supervisor {
         warn!("not from supervisor mode,  hart {}", hart);
     }
+
     unsafe {
         register::mstatus::clear_sie();
     }
