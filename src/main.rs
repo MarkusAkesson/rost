@@ -13,7 +13,6 @@ use rost::uart;
 
 use log::{info, LevelFilter};
 
-use riscv::asm::*;
 use riscv::register::*;
 use riscv_rt::entry;
 
@@ -74,9 +73,7 @@ fn kmain() -> ! {
     }
 
     loop {
-        unsafe {
-            wfi();
-        }
+        rost ::arch::riscv::wait();
     }
 }
 
@@ -109,8 +106,6 @@ fn kentry() -> ! {
         hartinit();
     }
     loop {
-        unsafe {
-            wfi();
-        }
+        rost ::arch::riscv::wait();
     }
 }
