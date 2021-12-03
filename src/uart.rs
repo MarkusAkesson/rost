@@ -2,7 +2,7 @@ use core::convert::TryInto;
 use core::fmt::Error;
 use core::fmt::Write;
 
-pub const UART_BASE_ADDR: usize = 0x1_000_0000;
+pub const UART_BASE_ADDR: usize = 0x10_000_000;
 
 #[macro_export]
 macro_rules! print {

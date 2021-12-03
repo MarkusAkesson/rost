@@ -2,12 +2,16 @@
 #![no_main]
 #![feature(global_asm)]
 #![feature(asm)]
+#![feature(custom_test_frameworks)]
+#![test_runner(test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
 use rost::klog;
 use rost::mem;
 use rost::plic;
+use rost::rand::xorshift::XorShift;
 use rost::trap;
 use rost::uart;
 
@@ -16,6 +20,8 @@ use log::{info, LevelFilter};
 use riscv::register::*;
 use riscv_rt::entry;
 
+/// Blocks harts > 0 from booting, gets set to true when hart 0
+/// is initated and irq are turned on
 static BOOT: AtomicBool = AtomicBool::new(false);
 
 extern "C" {
@@ -72,11 +78,18 @@ fn kmain() -> ! {
         riscv::register::sie::set_sext();
     }
 
+    #[cfg(test)]
+    test_main();
+
     loop {
         rost ::arch::riscv::wait();
     }
 }
 
+/// Initiate a hart
+///
+/// Called for each hart that is starting up.
+/// Calls kmain
 fn hartinit() {
     info!("Booting hart {}", mhartid::read());
     mem::enable_mmu();
@@ -102,10 +115,22 @@ fn kentry() -> ! {
 
         kinit();
     } else {
-        while !BOOT.load(Ordering::Relaxed) {}
+        while !BOOT.load(Ordering::Relaxed) {
+            unsafe {
+                wfi();
+            }
+        }
         hartinit();
     }
     loop {
         rost ::arch::riscv::wait();
+    }
+}
+
+#[cfg(test)]
+fn test_runner(tests: &[&dyn Fn()]) {
+    log::info!("running {} tests", tests.len());
+    for test in tests {
+        test();
     }
 }

@@ -2,6 +2,7 @@
 #![feature(asm)]
 #![feature(global_asm)]
 #![feature(panic_info_message)]
+#![feature(custom_test_frameworks)]
 
 pub mod arch;
 pub mod interrupt;
@@ -9,6 +10,7 @@ pub mod klog;
 pub mod mem;
 pub mod page;
 pub mod plic;
+pub mod rand;
 pub mod symbols;
 pub mod trap;
 pub mod uart;
