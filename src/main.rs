@@ -2,9 +2,6 @@
 #![no_main]
 #![feature(global_asm)]
 #![feature(asm)]
-#![feature(custom_test_frameworks)]
-#![test_runner(test_runner)]
-#![reexport_test_harness_main = "test_main"]
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
@@ -21,7 +18,7 @@ use riscv::register::*;
 use riscv_rt::entry;
 
 /// Blocks harts > 0 from booting, gets set to true when hart 0
-/// is initated and irq are turned on
+/// is initated and interrupts are turned on
 static BOOT: AtomicBool = AtomicBool::new(false);
 
 extern "C" {
@@ -125,10 +122,3 @@ fn kentry() -> ! {
     }
 }
 
-#[cfg(test)]
-fn test_runner(tests: &[&dyn Fn()]) {
-    log::info!("running {} tests", tests.len());
-    for test in tests {
-        test();
-    }
-}

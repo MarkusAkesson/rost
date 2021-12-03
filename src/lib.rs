@@ -2,7 +2,6 @@
 #![feature(asm)]
 #![feature(global_asm)]
 #![feature(panic_info_message)]
-#![feature(custom_test_frameworks)]
 
 pub mod arch;
 pub mod interrupt;
