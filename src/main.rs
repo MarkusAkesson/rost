@@ -116,14 +116,12 @@ fn kentry() -> ! {
         kinit();
     } else {
         while !BOOT.load(Ordering::Relaxed) {
-            unsafe {
-                wfi();
-            }
+                rost::arch::riscv::wait();
         }
         hartinit();
     }
     loop {
-        rost ::arch::riscv::wait();
+        rost::arch::riscv::wait();
     }
 }
 
