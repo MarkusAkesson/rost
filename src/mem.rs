@@ -6,6 +6,41 @@ use crate::uart;
 
 use log::info;
 
+pub struct Region {
+    start: usize,
+    end: usize,
+    flags: Attribute,
+    name: &'static str,
+}
+
+impl Region {
+    pub fn new(start: usize, end: usize, flags: Attribute, name: &'static str) -> Self {
+        Self {
+            start, end, flags, name
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.end - self.start
+    }
+
+    pub fn start_addr(&self) -> usize {
+        self.start
+    }
+
+    pub fn end_addr(&self) -> usize {
+        self.end
+    }
+
+    pub fn flags(&self) -> Attribute {
+        self.flags
+    }
+
+    pub fn name(&self) -> &str {
+        self.name
+    }
+}
+
 pub unsafe fn init() {
     info!("Initiating memory");
     page::init();
@@ -13,33 +48,38 @@ pub unsafe fn init() {
     let pgtable: &mut PageTable = &mut *(&KERNEL_PAGE_TABLE as *const _ as *mut _); // to bypass mut ref
 
     let regions = &[
-        (DATA_START(), DATA_END(), Attribute::ReadExecute as usize),
-        (
+        Region::new(DATA_START(), DATA_END(), Attribute::ReadExecute, "DATA"),
+        Region::new(
             RODATA_START(),
             RODATA_END(),
-            Attribute::ReadExecute as usize,
+            Attribute::ReadExecute,
+            "RODATA",
         ),
-        (
+        Region::new(
             TEXT_START(),
             RODATA_START(),
-            Attribute::ReadExecute as usize,
+            Attribute::ReadExecute,
+            "Text",
         ),
-        (BSS_START(), BSS_END(), Attribute::ReadWrite as usize),
-        (
+        Region::new(BSS_START(), BSS_END(), Attribute::ReadWrite, "BSS"),
+        Region::new(
             KERNEL_STACK_END(),
             KERNEL_STACK_START(),
-            Attribute::ReadWrite as usize,
+            Attribute::ReadWrite,
+            "KERNEL_STACK",
         ),
-        (HEAP_START(), HEAP_END(), Attribute::ReadWrite as usize),
-        (
+        //FIXME: (HEAP_START(), HEAP_END(), Attribute::ReadWrite as usize),
+        Region::new(
             uart::UART_BASE_ADDR,
             uart::UART_BASE_ADDR,
-            Attribute::ReadWrite as usize,
+            Attribute::ReadWrite,
+            "Uart",
         ),
-        (
+        Region::new(
             PLIC_BASE,
-            PLIC_BASE + 0x400_0000,
-            Attribute::ReadWrite as usize,
+            PLIC_BASE + 0x400_000,
+            Attribute::ReadWrite,
+            "PLIC_BASE",
         ),
     ];
 
