@@ -1,5 +1,6 @@
 use crate::symbols::{HEAP_SIZE, HEAP_START};
 use crate::{print, println};
+use crate::mem::Region;
 
 use core::mem::size_of;
 use core::ptr::null_mut;
@@ -345,20 +346,19 @@ impl PageTable {
         }
     }
 
-    pub fn id_map_range(&mut self, start: usize, end: usize, flag: usize) {
-        info!("{}->{} ({})", start, end, end - start);
-        let mut memaddr = align_val_down(start, PAGE_ORDER);
-        let num_pages = (align_val(end, PAGE_ORDER) - memaddr) / PAGE_SIZE;
+    pub fn id_map_range(&mut self, region: &Region) {
+        info!("{}: {}->{} ({})",region.name(), region.start_addr(), region.end_addr(), region.len());
+        let mut memaddr = align_val_down(region.start_addr(), PAGE_ORDER);
+        let num_pages = (align_val(region.end_addr(), PAGE_ORDER) - memaddr) / PAGE_SIZE;
         (0..num_pages).for_each(|_| {
-            self.map_addr(memaddr, memaddr, flag, 0);
+            self.map_addr(memaddr, memaddr, region.flags() as usize, 0);
             memaddr += PAGE_SIZE;
         });
     }
 
-    pub fn id_map_ranges(&mut self, arr: &[(usize, usize, usize)]) {
-        arr.into_iter().for_each(|range| {
-            let (start, end, flags) = range;
-            self.id_map_range(*start, *end, *flags);
+    pub fn id_map_ranges(&mut self, arr: &[Region]) {
+        arr.into_iter().for_each(|region| {
+            self.id_map_range(region);
         });
     }
 
