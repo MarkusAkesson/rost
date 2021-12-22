@@ -4,7 +4,7 @@ use crate::{print, println};
 use core::mem::size_of;
 use core::ptr::null_mut;
 
-use log::info;
+use log::{debug,info, warn};
 
 pub const PAGE_SIZE: usize = 1 << PAGE_ORDER;
 const PAGE_ORDER: usize = 12;
@@ -70,6 +70,7 @@ pub fn alloc(pages: usize) -> *mut u8 {
             return (FIRST_PAGE + PAGE_SIZE * i) as *mut u8;
         }
     }
+    warn!("alloc: ptr is NULL");
     null_mut()
 }
 
@@ -79,7 +80,7 @@ pub fn zalloc(pages: usize) -> *mut u8 {
         let len = (PAGE_SIZE * pages) / 8;
         let slice = unsafe { core::slice::from_raw_parts_mut(ptr as *mut u64, len) };
         slice.iter_mut().for_each(|ptr| *ptr = 0);
-    }
+    } 
     ptr
 }
 
@@ -300,7 +301,7 @@ impl PageTable {
 
     pub fn kernel_map(&mut self, vaddr: usize, paddr: usize, flags: usize) {
         if flags & Attribute::User as usize != 0 {
-            panic!("Trying to map user page to kernel page");
+            panic!("Trying to map user page to kernel page table");
         }
         self.map_addr(vaddr, paddr, flags, 0);
     }
@@ -331,10 +332,11 @@ impl PageTable {
     }
 
     pub fn map_range(&mut self, start: usize, end: usize, vstart: usize, flags: usize) {
-        let mut memaddr = unsafe { start & !(FIRST_PAGE - 1) };
-        let mut vstart = unsafe { vstart & !(FIRST_PAGE - 1) };
+        info!("{}->{} ({})", start, end, end - start);
+        let mut memaddr = start & !(PAGE_SIZE - 1);
+        let mut vstart = vstart & !(PAGE_SIZE - 1);
 
-        let pages = (align_val_down(end, 12) - memaddr) / PAGE_ORDER;
+        let pages = (align_val_down(end, 12) - memaddr) / PAGE_SIZE;
 
         for _ in 0..pages {
             self.map_addr(vstart, memaddr, flags, 0);
@@ -344,8 +346,8 @@ impl PageTable {
     }
 
     pub fn id_map_range(&mut self, start: usize, end: usize, flag: usize) {
-        //let mut memaddr = align_val_down(start, PAGE_ORDER);
-        let mut memaddr = start & !(PAGE_SIZE - 1);
+        info!("{}->{} ({})", start, end, end - start);
+        let mut memaddr = align_val_down(start, PAGE_ORDER);
         let num_pages = (align_val(end, PAGE_ORDER) - memaddr) / PAGE_SIZE;
         (0..num_pages).for_each(|_| {
             self.map_addr(memaddr, memaddr, flag, 0);

@@ -28,6 +28,9 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     } else {
         println!("no information available.");
     }
+
+    page::KERNEL_PAGE_TABLE.dump();
+
     loop {
         unsafe {
             riscv::asm::wfi();
