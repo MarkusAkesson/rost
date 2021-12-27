@@ -6,6 +6,8 @@ use crate::uart;
 
 use log::info;
 
+use core::arch::asm;
+
 pub struct Region {
     start: usize,
     end: usize,
