@@ -1,9 +1,8 @@
 #![no_std]
 #![no_main]
-#![feature(global_asm)]
-#![feature(asm)]
 
 use core::sync::atomic::{AtomicBool, Ordering};
+use core::arch::{asm, global_asm};
 
 use rost::klog;
 use rost::mem;
@@ -11,6 +10,7 @@ use rost::plic;
 use rost::rand::xorshift::XorShift;
 use rost::trap;
 use rost::uart;
+use rost::arch;
 
 use log::{info, LevelFilter};
 
@@ -31,6 +31,10 @@ global_asm!(
 .align 4
 goto_supervised:
     csrw satp, zero
+    li t0, 0xffff
+    csrw medeleg, t0
+    li t0, 0xffff
+    csrw mideleg, t0
     csrr a1, mhartid
     mv tp, a1
     mret
@@ -40,40 +44,70 @@ goto_supervised:
 /// Initiates the kernel
 ///
 /// Go to supervised mode when initialization is done
-#[no_mangle]
-fn kinit() {
-    unsafe {
-        mem::init();
-        plic::init();
-        mem::enable_mmu();
-        trap::hartinit();
-    }
-    plic::hartinit();
+#[entry]
+fn kinit() -> ! {
+    if mhartid::read() == 0 {
+        klog::init(LevelFilter::Trace).expect("Failed to setup logger");
+        uart::Uart::new(uart::UART_BASE_ADDR).init();
 
-    info!("Setup done, jumping to supervisor mode");
+        info!("Booting Rost ...");
+        info!("Current hart: {}", mhartid::read());
+    }
+    
+    info!("Jumping to supervisor mode");
 
     unsafe {
         mstatus::set_mpp(mstatus::MPP::Supervisor);
         mepc::write(kmain as usize);
-        goto_supervised();
+
+        asm!("csrw satp, zero");
+        asm!("csrw pmpcfg0, 0xF");
+        // delegate all interrupts and exceptions to supervisor mode
+        asm!("li t0, 0xffff");
+        asm!("csrw medeleg, t0");
+        asm!("li t0, 0xffff");
+        asm!("csrw mideleg, t0");
+        // save cpuid to tp
+        asm!("csrr a1, mhartid");
+        asm!("mv tp, a1");
+        // switch to supervisor mode
+        info!("{:X} {:X}", mepc::read(), kmain as usize);
+        asm!("mret");
+        //goto_supervised();
+    }
+
+    loop {
+        rost::arch::riscv::wait();
     }
 }
 
 /// Kernel main
 /// Never returns.
 #[no_mangle]
-fn kmain() -> ! {
-    // Release the other HARTs
-    //BOOT.store(true, Ordering::Relaxed);
-    info!("Enabling interrutps");
-    unsafe {
-        // enable interrupts
-        riscv::register::sstatus::set_sie();
-        sstatus::set_spp(sstatus::SPP::Supervisor);
-        // enable software interrupt
-        riscv::register::sie::set_ssoft();
-        riscv::register::sie::set_sext();
+unsafe fn kmain() -> ! {
+    info!("Initiating hart:{}", arch::riscv::thread_pointer());
+    if  arch::riscv::thread_pointer() == 0 {
+        mem::init();
+        plic::init();
+        mem::enable_mmu();
+        trap::hartinit();
+        plic::hartinit();
+        // Release the other HARTs
+        //BOOT.store(true, Ordering::Relaxed);
+    } else {
+        while !BOOT.load(Ordering::Relaxed) {
+            rost::arch::riscv::wait();
+        }
+        hartinit();
     }
+
+    info!("Enabling interrutps");
+    // enable interrupts
+    riscv::register::sstatus::set_sie();
+    sstatus::set_spp(sstatus::SPP::Supervisor);
+    // enable software interrupt
+    riscv::register::sie::set_ssoft();
+    riscv::register::sie::set_sext();
 
     #[cfg(test)]
     test_main();
@@ -93,32 +127,6 @@ fn hartinit() {
     plic::hartinit();
     unsafe {
         trap::hartinit();
-    }
-    kmain();
-}
-
-/// Entrypoint for the rust code.
-///
-/// Setup kernel logger and initate uart.
-/// Never returns
-#[entry]
-fn kentry() -> ! {
-    if mhartid::read() == 0 {
-        klog::init(LevelFilter::Trace).expect("Failed to setup logger");
-        uart::Uart::new(uart::UART_BASE_ADDR).init();
-
-        info!("Booting Rost ...");
-        info!("Current hart: {}", mhartid::read());
-
-        kinit();
-    } else {
-        while !BOOT.load(Ordering::Relaxed) {
-                rost::arch::riscv::wait();
-        }
-        hartinit();
-    }
-    loop {
-        rost::arch::riscv::wait();
     }
 }
 
