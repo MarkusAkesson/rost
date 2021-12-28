@@ -31,6 +31,7 @@ global_asm!(
 .align 4
 goto_supervised:
     csrw satp, zero
+    csrw pmpcfg0, 0xF
     li t0, 0xffff
     csrw medeleg, t0
     li t0, 0xffff
@@ -60,20 +61,7 @@ fn kinit() -> ! {
         mstatus::set_mpp(mstatus::MPP::Supervisor);
         mepc::write(kmain as usize);
 
-        asm!("csrw satp, zero");
-        asm!("csrw pmpcfg0, 0xF");
-        // delegate all interrupts and exceptions to supervisor mode
-        asm!("li t0, 0xffff");
-        asm!("csrw medeleg, t0");
-        asm!("li t0, 0xffff");
-        asm!("csrw mideleg, t0");
-        // save cpuid to tp
-        asm!("csrr a1, mhartid");
-        asm!("mv tp, a1");
-        // switch to supervisor mode
-        info!("{:X} {:X}", mepc::read(), kmain as usize);
-        asm!("mret");
-        //goto_supervised();
+        goto_supervised();
     }
 
     loop {
