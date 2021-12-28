@@ -347,7 +347,7 @@ impl PageTable {
     }
 
     pub fn id_map_range(&mut self, region: &Region) {
-        info!("{}: {}->{} ({})",region.name(), region.start_addr(), region.end_addr(), region.len());
+        info!("{}: {:X}->{:X} ({})",region.name(), region.start_addr(), region.end_addr(), region.len());
         let mut memaddr = align_val_down(region.start_addr(), PAGE_ORDER);
         let num_pages = (align_val(region.end_addr(), PAGE_ORDER) - memaddr) / PAGE_SIZE;
         (0..num_pages).for_each(|_| {

@@ -1,6 +1,8 @@
 use crate::arch;
 use crate::interrupt;
 
+use core::arch::{asm, global_asm};
+
 use log::warn;
 use riscv::register;
 
@@ -35,25 +37,25 @@ pub enum Trap {
 
 #[no_mangle]
 extern "C" fn machine_trap() {
-    let epc = register::mepc::read();
-    let tval = register::mtval::read();
-    let cause = register::mcause::read();
-    let hart = register::mhartid::read();
-    let status = register::mstatus::read();
+    let epc = register::sepc::read();
+    let tval = register::stval::read();
+    let cause = register::scause::read();
+    let hart = arch::riscv::thread_pointer();
+    let status = register::sstatus::read();
     let mut sstatus_bits: usize;
     unsafe {
-        asm!("csrr {}, mstatus", out(reg) sstatus_bits);
+        asm!("csrr {}, sstatus", out(reg) sstatus_bits);
     }
 
     let is_interrupt = cause.is_interrupt();
     let cause = cause.code();
 
-    if status.spp() != register::mstatus::SPP::Supervisor {
+    if status.spp() != register::sstatus::SPP::Supervisor {
         warn!("not from supervisor mode,  hart {}", hart);
     }
 
     unsafe {
-        register::mstatus::clear_sie();
+        register::sstatus::clear_sie();
     }
 
     if arch::riscv::intr_get() {
@@ -110,7 +112,7 @@ extern "C" fn machine_trap() {
     }
 
     unsafe {
-        register::mstatus::set_sie();
+        register::sstatus::set_sie();
     }
 
     register::sepc::write(epc);
@@ -202,6 +204,6 @@ _start_trap:
 
     addi sp, sp, 256
 
-    mret
+    sret
 "#
 );
