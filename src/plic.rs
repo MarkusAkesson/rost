@@ -3,6 +3,9 @@
 // VIRTIO: 1..8
 // UART0: 10
 // PCIE: 32..35
+//
+
+use crate::arch::riscv::{self, thread_pointer};
 
 use log::info;
 
@@ -81,7 +84,7 @@ impl Plic {
 
     /// Enable an interrupt id.
     pub fn enable(&mut self, id: InterruptId) {
-        let enable = Self::senable(riscv::register::mhartid::read()) as *mut u32;
+        let enable = Self::senable(thread_pointer()) as *mut u32;
         // The plic enable register contains a bitmap over enabled interrupts.
         let id = 1 << id as u32;
         unsafe {
@@ -91,7 +94,7 @@ impl Plic {
 
     /// Disable an interrupt id.
     pub fn disable(&mut self, id: InterruptId) {
-        let disable = Self::senable(riscv::register::mhartid::read()) as *mut u32;
+        let disable = Self::senable(thread_pointer()) as *mut u32;
         // The plic enable register contains a bitmap over enabled interrupts.
         let id = !(1 << id as u32);
         unsafe {
@@ -104,7 +107,7 @@ impl Plic {
     /// Priority must be in range [0..7]
     pub fn set_priority(&mut self, id: InterruptId, priority: Priority) {
         let priority = priority as u32;
-        let reg = Plic::spriority(riscv::register::mhartid::read()) as *mut u32;
+        let reg = Plic::spriority(thread_pointer()) as *mut u32;
         unsafe {
             // Interrupt id offset is: PLIC_PRIORITY + 4 * id
             // Reg is u32, no neeed to multiply by 4
@@ -120,7 +123,7 @@ impl Plic {
     /// Threshold must be in [0..7]
     pub fn set_threshold(&mut self, threshold: Threshold) {
         let threshold = Priority::from(threshold) as u32;
-        let reg = Plic::spriority(riscv::register::mhartid::read()) as *mut u32;
+        let reg = Plic::spriority(thread_pointer()) as *mut u32;
         unsafe {
             reg.write_volatile(threshold);
         }
@@ -137,7 +140,7 @@ impl Plic {
     ///
     /// The id must be from `next`
     pub fn complete(&mut self, id: u32) {
-        let reg = Self::sclaim(riscv::register::mhartid::read()) as *mut u32;
+        let reg = Self::sclaim(thread_pointer()) as *mut u32;
         unsafe {
             reg.write_volatile(id);
         }
@@ -147,7 +150,7 @@ impl Plic {
     ///
     /// The PLIC will sort by priority and return the ID of the pending interrupt
     pub fn next(&mut self) -> Option<InterruptId> {
-        let reg = Self::sclaim(riscv::register::mhartid::read()) as *const u32;
+        let reg = Self::sclaim(thread_pointer()) as *const u32;
 
         let id = unsafe { reg.read_volatile() };
 

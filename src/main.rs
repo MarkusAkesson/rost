@@ -46,23 +46,27 @@ goto_supervised:
 ///
 /// Go to supervised mode when initialization is done
 #[entry]
-fn kinit() -> ! {
+unsafe fn kinit() -> ! {
     if mhartid::read() == 0 {
         klog::init(LevelFilter::Trace).expect("Failed to setup logger");
         uart::Uart::new(uart::UART_BASE_ADDR).init();
 
         info!("Booting Rost ...");
         info!("Current hart: {}", mhartid::read());
+
+        mem::init();
+        plic::init();
+        mem::enable_mmu();
+        trap::hartinit();
+        plic::hartinit();
     }
     
     info!("Jumping to supervisor mode");
 
-    unsafe {
-        mstatus::set_mpp(mstatus::MPP::Supervisor);
-        mepc::write(kmain as usize);
+    mstatus::set_mpp(mstatus::MPP::Supervisor);
+    mepc::write(kmain as usize);
 
-        goto_supervised();
-    }
+    goto_supervised();
 
     loop {
         rost::arch::riscv::wait();
@@ -75,11 +79,6 @@ fn kinit() -> ! {
 unsafe fn kmain() -> ! {
     info!("Initiating hart:{}", arch::riscv::thread_pointer());
     if  arch::riscv::thread_pointer() == 0 {
-        mem::init();
-        plic::init();
-        mem::enable_mmu();
-        trap::hartinit();
-        plic::hartinit();
         // Release the other HARTs
         //BOOT.store(true, Ordering::Relaxed);
     } else {
@@ -96,6 +95,7 @@ unsafe fn kmain() -> ! {
     // enable software interrupt
     riscv::register::sie::set_ssoft();
     riscv::register::sie::set_sext();
+    info!("hart #{} ready", arch::riscv::thread_pointer());
 
     #[cfg(test)]
     test_main();
@@ -110,7 +110,7 @@ unsafe fn kmain() -> ! {
 /// Called for each hart that is starting up.
 /// Calls kmain
 fn hartinit() {
-    info!("Booting hart {}", mhartid::read());
+    info!("Booting hart {}", arch::riscv::thread_pointer());
     mem::enable_mmu();
     plic::hartinit();
     unsafe {

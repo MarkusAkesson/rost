@@ -51,12 +51,12 @@ pub unsafe fn init() {
 
     let regions = &[
         Region::new(DATA_START(), DATA_END(), Attribute::ReadExecute, "DATA"),
-        Region::new(
-            RODATA_START(),
-            RODATA_END(),
-            Attribute::ReadExecute,
-            "RODATA",
-        ),
+        //Region::new(
+        //    RODATA_START(),
+        //    RODATA_END(),
+        //    Attribute::ReadExecute,
+        //    "RODATA",
+        //),
         Region::new(
             TEXT_START(),
             RODATA_START(),
@@ -70,7 +70,7 @@ pub unsafe fn init() {
             Attribute::ReadWrite,
             "KERNEL_STACK",
         ),
-        //FIXME: (HEAP_START(), HEAP_END(), Attribute::ReadWrite as usize),
+        //FIXME: (HEAP_START(), HEAP_END(), Attribute::ReadWrite as usize, "Heap"),
         Region::new(
             uart::UART_BASE_ADDR,
             uart::UART_BASE_ADDR,
