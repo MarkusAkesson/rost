@@ -1,6 +1,7 @@
 use crate::symbols::{HEAP_SIZE, HEAP_START};
 use crate::{print, println};
 use crate::mem::Region;
+use crate::arch::riscv::uptime;
 
 use core::mem::size_of;
 use core::ptr::null_mut;
@@ -52,6 +53,7 @@ pub fn init() {
 
 pub fn alloc(pages: usize) -> *mut u8 {
     assert!(pages > 0);
+    let start = uptime();
     unsafe {
         let ptr = HEAP_START() as *mut Page;
         for i in 0..PAGES - pages {
@@ -67,7 +69,7 @@ pub fn alloc(pages: usize) -> *mut u8 {
 
             slice.iter_mut().for_each(|page| page.set(PageFlag::Taken));
             slice[pages - 1].set(PageFlag::Last);
-
+            debug!("Alloc took: {:#?}", uptime() - start);
             return (FIRST_PAGE + PAGE_SIZE * i) as *mut u8;
         }
     }
@@ -189,7 +191,8 @@ pub enum Attribute {
 }
 
 impl Entry {
-    pub const fn new(ppn: usize, flags: usize) -> Self {
+    pub fn new(ppn: usize, flags: usize) -> Self {
+        //info!("PPN: {:X}, flags: {:X}, VPN: {:X}",ppn, flags, ((ppn & !0xfff as usize) >> 2) | flags);
         Self(((ppn & !0xfff) >> 2) | flags)
     }
 
@@ -234,7 +237,7 @@ impl Entry {
     }
 
     pub const fn physical_addr(&self) -> PPN {
-        PPN((self.0 & !0x3ff) << 2)
+        PPN((self.0 & !0x3ff as usize) << 2)
     }
 
     pub const fn flags(&self) -> usize {
@@ -256,7 +259,7 @@ impl VPN {
     pub const fn vpn2(&self) -> usize {
         (self.0 >> 30) & 0x1ff
     }
-    pub fn index(&self, id: usize) -> usize {
+    pub const fn index(&self, id: usize) -> usize {
         match id {
             0 => self.vpn0(),
             1 => self.vpn1(),
@@ -279,7 +282,7 @@ impl PPN {
         (self.0 >> 30) & 0x3ff_ffff
     }
 
-    pub fn index(&self, id: usize) -> usize {
+    pub const fn index(&self, id: usize) -> usize {
         match id {
             0 => self.ppn0(),
             1 => self.ppn1(),
@@ -404,14 +407,24 @@ impl PageTable {
         Some(v.physical_addr().0)
     }
 
+    fn raw(&self) {
+        for (i, &v) in self.entries.iter().enumerate() {
+            println!("{}: Addr: {:X}, Flags: {}", i, v.physical_addr().0, v.flags());
+        }
+    }
+
     pub fn dump(&self) {
         info!("----- Dumping Page Table -----");
+        /* Get the addr of the page table */
+        let pgtable = &KERNEL_PAGE_TABLE as *const _ as usize;
+        info!("\troot: {:X}", pgtable);
+        self.raw();
         self._dump(2, 0);
         info!("----- End of Page Table -----");
     }
 
     fn _dump(&self, level: usize, vpn: usize) {
-        for (i, &v) in self.entries.iter().enumerate().filter(|(_, v)| v.valid()) {
+        for (i, &v) in self.entries.iter().enumerate().filter(|(_, v)| { v.valid()} ) {
             if v.is_leaf() {
                 let u_flag = if v.user() { "U" } else { "-" };
                 let r_flag = if v.readable() { "R" } else { "-" };
@@ -440,13 +453,15 @@ impl PageTable {
                 println!(
                     "{}: 0x{:X} -> 0x{:X}",
                     i,
-                    (vpn << 0 | i) << (9 * level + 12),
+                    (vpn << 9 | i) << (9 * level + 12),
                     v.physical_addr().0
                 );
 
                 let table = v.physical_addr().0 as *const Self;
-                let table = unsafe { table.as_ref().unwrap() };
-                table._dump(level - 1, (vpn << 9) | i);
+                let table = unsafe { table.as_ref() };
+                if let Some(table) = table {
+                    table._dump(level - 1, (vpn << 9) | i);
+                }
             }
         }
     }

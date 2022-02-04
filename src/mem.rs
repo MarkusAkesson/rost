@@ -70,7 +70,7 @@ pub unsafe fn init() {
             Attribute::ReadWrite,
             "KERNEL_STACK",
         ),
-        //FIXME: (HEAP_START(), HEAP_END(), Attribute::ReadWrite as usize, "Heap"),
+        Region::new(HEAP_START(), HEAP_END(), Attribute::ReadWrite, "Heap"),
         Region::new(
             uart::UART_BASE_ADDR,
             uart::UART_BASE_ADDR,

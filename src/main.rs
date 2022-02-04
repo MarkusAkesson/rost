@@ -59,6 +59,7 @@ unsafe fn kinit() -> ! {
         mem::enable_mmu();
         trap::hartinit();
         plic::hartinit();
+        rost::page::KERNEL_PAGE_TABLE.dump();
     }
     
     info!("Jumping to supervisor mode");
@@ -99,6 +100,7 @@ unsafe fn kmain() -> ! {
 
     #[cfg(test)]
     test_main();
+    rost::page::KERNEL_PAGE_TABLE.dump();
 
     loop {
         rost ::arch::riscv::wait();
