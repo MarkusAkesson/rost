@@ -12,7 +12,7 @@ const PAGE_ORDER: usize = 12;
 const PAGE_TABLE_ENTRIES: usize = 512;
 
 static mut PAGES: usize = 0;
-static mut FIRST_PAGE: usize = 0;
+static mut PAGE_ALLOC_START: usize = 0;
 
 pub static KERNEL_PAGE_TABLE: PageTable = PageTable::new();
 
@@ -45,7 +45,7 @@ pub fn init() {
             (*ptr.add(i)).clear();
         }
 
-        FIRST_PAGE = align_val(HEAP_START() + PAGES + size_of::<Page>(), PAGE_ORDER);
+        PAGE_ALLOC_START = align_val(HEAP_START() + PAGES + size_of::<Page>(), PAGE_ORDER);
     }
     info!("Paging OK");
 }
@@ -53,7 +53,7 @@ pub fn init() {
 pub fn alloc(pages: usize) -> *mut u8 {
     assert!(pages > 0);
     unsafe {
-        let ptr = HEAP_START() as *mut Page;
+        let ptr = PAGE_ALLOC_START as *mut Page;
         for i in 0..PAGES - pages {
             if !(*ptr.add(i)).is_free() {
                 continue;
@@ -68,7 +68,7 @@ pub fn alloc(pages: usize) -> *mut u8 {
             slice.iter_mut().for_each(|page| page.set(PageFlag::Taken));
             slice[pages - 1].set(PageFlag::Last);
 
-            return (FIRST_PAGE + PAGE_SIZE * i) as *mut u8;
+            return (PAGE_ALLOC_START + PAGE_SIZE * i) as *mut u8;
         }
     }
     warn!("alloc: ptr is NULL");
@@ -89,8 +89,8 @@ pub fn dealloc(ptr: *mut u8) {
     assert!(!ptr.is_null());
 
     unsafe {
-        let addr = HEAP_START() + (ptr as usize - FIRST_PAGE) / PAGE_SIZE;
-        assert!(addr >= HEAP_START() && addr < FIRST_PAGE);
+        let addr = HEAP_START() + (ptr as usize - PAGE_ALLOC_START) / PAGE_SIZE;
+        assert!(addr >= HEAP_START() && addr < PAGE_ALLOC_START);
         let mut p = addr as *mut Page;
         assert!(!(*p).is_free());
         while !(*p).is_free() && !(*p).is_last() {
@@ -374,7 +374,7 @@ impl PageTable {
 
     pub fn mark(&mut self, start: usize, end: usize, flags: usize) {
         let mut memaddr = align_val(start, PAGE_ORDER);
-        let mut start = unsafe { start & !(FIRST_PAGE - 1) };
+        let mut start = unsafe { start & !(PAGE_ALLOC_START- 1) };
 
         let pages = (align_val(end, 12) - memaddr) / PAGE_ORDER;
 
