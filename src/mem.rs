@@ -70,7 +70,7 @@ pub unsafe fn init() {
             Attribute::ReadWrite,
             "KERNEL_STACK",
         ),
-        //FIXME: (HEAP_START(), HEAP_END(), Attribute::ReadWrite as usize, "Heap"),
+        // Region::new(HEAP_START(), HEAP_END(), Attribute::ReadWrite, "Heap"),
         Region::new(
             uart::UART_BASE_ADDR,
             uart::UART_BASE_ADDR,
@@ -79,7 +79,7 @@ pub unsafe fn init() {
         ),
         Region::new(
             PLIC_BASE,
-            PLIC_BASE + 0x400_000,
+            PLIC_BASE + 0x8_000, // NCPUS * 2 * 1000
             Attribute::ReadWrite,
             "PLIC_BASE",
         ),
