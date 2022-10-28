@@ -47,9 +47,6 @@ extern "C" fn machine_trap() {
         asm!("csrr {}, sstatus", out(reg) sstatus_bits);
     }
 
-    let is_interrupt = cause.is_interrupt();
-    let cause = cause.code();
-
     if status.spp() != register::sstatus::SPP::Supervisor {
         warn!("not from supervisor mode,  hart {}", hart);
     }
@@ -62,12 +59,12 @@ extern "C" fn machine_trap() {
         panic!("interrupt not disabled");
     }
 
-    if is_interrupt {
+    if cause.is_interrupt() {
         // handle device interrupt from PLIC
-        interrupt::handle_interrupt(cause as u32);
+        interrupt::handle_interrupt(cause.code() as u32);
     } else {
         // handle synchronous interrupt or exception
-        match cause {
+        match cause.code() {
             0 => panic!(
                 "Instruction address misaligned CPU#{} -> 0x{:08x}: 0x{:08x}",
                 hart, epc, tval
@@ -106,7 +103,7 @@ extern "C" fn machine_trap() {
             ),
             _ => panic!(
                 "Unhandled sync trap {}. CPU#{} -> 0x{:08x}: 0x{:08x}",
-                cause, hart, epc, tval
+                cause.code(), hart, epc, tval
             ),
         }
     }
@@ -123,7 +120,6 @@ extern "C" fn machine_trap() {
 
 pub unsafe fn hartinit() {
     register::stvec::write(_start_trap as usize, register::stvec::TrapMode::Direct);
-    register::mtvec::write(_start_trap as usize, register::stvec::TrapMode::Direct);
 }
 
 extern "C" {
