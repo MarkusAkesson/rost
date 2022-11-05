@@ -97,9 +97,6 @@ unsafe fn kmain() -> ! {
     riscv::register::sie::set_sext();
     info!("hart #{} ready", arch::riscv::thread_pointer());
 
-    #[cfg(test)]
-    test_main();
-
     loop {
         rost ::arch::riscv::wait();
     }
