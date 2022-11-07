@@ -23,9 +23,9 @@ pub fn uptime() -> Duration {
 }
 
 fn rdtime() -> usize {
-    let x: usize;
-    unsafe { asm!("rdtime {}", out(reg) x) };
-    x
+    unsafe {
+        return core::ptr::read_volatile(0x0200_bff8 as *const usize)
+    }
 }
 
 /// Check if interrupt is enabled
