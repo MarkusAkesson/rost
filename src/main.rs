@@ -80,7 +80,7 @@ unsafe fn kmain() -> ! {
     info!("Initiating hart:{}", arch::riscv::thread_pointer());
     if  arch::riscv::thread_pointer() == 0 {
         // Release the other HARTs
-        //BOOT.store(true, Ordering::Relaxed);
+        //BOOT.store(true, Ordering::Relaxed);main
     } else {
         while !BOOT.load(Ordering::Relaxed) {
             rost::arch::riscv::wait();
@@ -88,13 +88,8 @@ unsafe fn kmain() -> ! {
         hartinit();
     }
 
-    info!("Enabling interrutps");
-    // enable interrupts
-    riscv::register::sstatus::set_sie();
-    sstatus::set_spp(sstatus::SPP::Supervisor);
-    // enable software interrupt
-    riscv::register::sie::set_ssoft();
-    riscv::register::sie::set_sext();
+    trap::enable_interrupts();
+
     info!("hart #{} ready", arch::riscv::thread_pointer());
 
     loop {

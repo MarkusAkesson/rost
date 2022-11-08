@@ -3,7 +3,7 @@ use crate::interrupt;
 
 use core::arch::{asm, global_asm};
 
-use log::warn;
+use log::{info, warn};
 use riscv::register;
 
 #[derive(Debug, Copy, Clone)]
@@ -116,6 +116,16 @@ extern "C" fn machine_trap() {
     unsafe {
         asm!("csrw sstatus, {}", in(reg) sstatus_bits);
     }
+}
+
+pub unsafe fn enable_interrupts() {
+    info!("Enabling interrutps");
+    // enable interrupts
+    register::sstatus::set_sie();
+    register::sstatus::set_spp(register::sstatus::SPP::Supervisor);
+    // enable software interrupt
+    register::sie::set_ssoft();
+    register::sie::set_sext();
 }
 
 pub unsafe fn hartinit() {
