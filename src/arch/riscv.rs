@@ -5,6 +5,12 @@ use riscv;
 use core::arch::asm;
 use core::time::Duration;
 
+mod offset {
+    pub const BASE: usize = 0x0200_0000;
+    pub const MTIME: usize = 0xbff8;
+    pub const MTIMECMP: usize = 0x4000;
+}
+
 /// Build satp value from mode, asid and page table base addr
 pub fn build_satp(mode: usize, asid: usize, addr: usize) -> usize {
     assert!(addr % PAGE_SIZE == 0);
@@ -18,13 +24,21 @@ pub fn wait() {
 }
 
 pub fn uptime() -> Duration {
-    let time = rdtime();
+    let time = time();
     Duration::from_nanos(time as u64 * 100)
 }
 
-fn rdtime() -> usize {
+fn time() -> usize {
     unsafe {
-        return core::ptr::read_volatile(0x0200_bff8 as *const usize)
+        return core::ptr::read_volatile((offset::BASE + offset::MTIME) as *const usize)
+    }
+}
+
+pub fn set_time(timer_val: usize) {
+    let hart_id = thread_pointer();
+
+    unsafe {
+        return core::ptr::write_volatile((offset::BASE + offset::MTIMECMP + hart_id) as *mut usize, timer_val)
     }
 }
 
