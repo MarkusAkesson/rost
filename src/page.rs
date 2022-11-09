@@ -47,7 +47,6 @@ pub fn init() {
 
         PAGE_ALLOC_START = align_val(HEAP_START() + PAGES + size_of::<Page>(), PAGE_ORDER);
     }
-    info!("Paging OK");
 }
 
 pub fn alloc(pages: usize) -> *mut u8 {
@@ -333,7 +332,7 @@ impl PageTable {
     }
 
     pub fn map_range(&mut self, start: usize, end: usize, vstart: usize, flags: usize) {
-        info!("{}->{} ({})", start, end, end - start);
+        info!("\t{}->{} ({})", start, end, end - start);
         let mut memaddr = start & !(PAGE_SIZE - 1);
         let mut vstart = vstart & !(PAGE_SIZE - 1);
 
@@ -347,7 +346,7 @@ impl PageTable {
     }
 
     pub fn id_map_range(&mut self, region: &Region) {
-        info!("{}: {:X}->{:X} ({})",region.name(), region.start_addr(), region.end_addr(), region.len());
+        info!("\t{}: {:X}->{:X} ({})",region.name(), region.start_addr(), region.end_addr(), region.len());
         let mut memaddr = align_val_down(region.start_addr(), PAGE_ORDER);
         let num_pages = (align_val(region.end_addr(), PAGE_ORDER) - memaddr) / PAGE_SIZE;
         (0..num_pages).for_each(|_| {
@@ -356,7 +355,10 @@ impl PageTable {
         });
     }
 
-    pub fn id_map_ranges(&mut self, arr: &[Region]) {
+    pub fn id_map_ranges<'a, I>(&mut self, arr: I) 
+    where
+        I: Iterator<Item = &'a Region>,
+    {
         arr.into_iter().for_each(|region| {
             self.id_map_range(region);
         });

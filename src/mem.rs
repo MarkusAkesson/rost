@@ -49,7 +49,7 @@ pub unsafe fn init() {
 
     let pgtable: &mut PageTable = &mut *(&KERNEL_PAGE_TABLE as *const _ as *mut _); // to bypass mut ref
 
-    let regions = &[
+    let regions = [
         Region::new(DATA_START(), DATA_END(), Attribute::ReadExecute, "DATA"),
         //Region::new(
         //    RODATA_START(),
@@ -86,8 +86,7 @@ pub unsafe fn init() {
     ];
 
     info!("Mapping the kernel");
-    pgtable.id_map_ranges(regions);
-    info!("Memory Initiated");
+    pgtable.id_map_ranges(regions.iter());
 }
 
 pub fn enable_mmu() {
