@@ -118,6 +118,9 @@ extern "C" fn machine_trap() {
     }
 }
 
+/// Enable Interrupts
+///
+/// We handle all interrupts in supervisor mode
 pub unsafe fn enable_interrupts() {
     info!("Enabling interrutps");
     // enable interrupts
@@ -128,6 +131,10 @@ pub unsafe fn enable_interrupts() {
     register::sie::set_sext();
 }
 
+
+/// Hart init
+///
+/// Set the vector for handling supervisor mode
 pub unsafe fn hartinit() {
     register::stvec::write(_start_trap as usize, register::stvec::TrapMode::Direct);
 }
