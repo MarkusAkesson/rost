@@ -47,7 +47,7 @@ pub unsafe fn init() {
     info!("Initiating memory");
     page::init();
 
-    let pgtable: &mut PageTable = &mut *(&KERNEL_PAGE_TABLE as *const _ as *mut _); // to bypass mut ref
+    let pgtable: &mut PageTable = KERNEL_PAGE_TABLE.get_mut();
 
     let regions = [
         Region::new(DATA_START(), DATA_END(), Attribute::ReadExecute, "DATA"),
@@ -91,10 +91,11 @@ pub unsafe fn init() {
 
 pub fn enable_mmu() {
     info!("Enabling mmu");
-    let root_ppn = &KERNEL_PAGE_TABLE as *const PageTable as usize;
-    let satp_val = arch::riscv::build_satp(8, 0, root_ppn);
     unsafe {
-        asm!("csrw satp, {}", in(reg) satp_val);
-        riscv::asm::sfence_vma(0, 0);
+        let root_ppn = KERNEL_PAGE_TABLE.get() as *const _ as usize;
+    
+        let satp_val = arch::riscv::build_satp(8, 0, root_ppn);
+            asm!("csrw satp, {}", in(reg) satp_val);
+            riscv::asm::sfence_vma(0, 0);
     }
 }

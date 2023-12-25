@@ -5,7 +5,7 @@
 // PCIE: 32..35
 //
 
-use crate::arch::riscv::{self, thread_pointer};
+use crate::arch::riscv::thread_pointer;
 
 use log::info;
 

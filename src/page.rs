@@ -4,8 +4,9 @@ use crate::mem::Region;
 
 use core::mem::size_of;
 use core::ptr::null_mut;
+use core::cell::SyncUnsafeCell;
 
-use log::{debug,info, warn};
+use log::{info, warn};
 
 pub const PAGE_SIZE: usize = 1 << PAGE_ORDER;
 const PAGE_ORDER: usize = 12;
@@ -14,7 +15,7 @@ const PAGE_TABLE_ENTRIES: usize = 512;
 static mut PAGES: usize = 0;
 static mut PAGE_ALLOC_START: usize = 0;
 
-pub static KERNEL_PAGE_TABLE: PageTable = PageTable::new();
+pub static mut KERNEL_PAGE_TABLE: SyncUnsafeCell<PageTable> = SyncUnsafeCell::new(PageTable::new());
 
 extern "C" {
     static _sheap: u8;

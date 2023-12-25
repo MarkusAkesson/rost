@@ -1,4 +1,6 @@
 
+pub mod queue
+
 const VENDOR_ID: u32 = 0x1AF4;
 const DEVICE_ID: u32 = 0x103F;
 

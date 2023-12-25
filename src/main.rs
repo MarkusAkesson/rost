@@ -2,12 +2,11 @@
 #![no_main]
 
 use core::sync::atomic::{AtomicBool, Ordering};
-use core::arch::{asm, global_asm};
+use core::arch::global_asm;
 
 use rost::klog;
 use rost::mem;
 use rost::plic;
-use rost::rand::xorshift::XorShift;
 use rost::trap;
 use rost::uart;
 use rost::arch;

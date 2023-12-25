@@ -1,5 +1,6 @@
 #![no_std]
 #![feature(panic_info_message)]
+#![feature(sync_unsafe_cell)]
 
 pub mod arch;
 pub mod interrupt;
@@ -27,7 +28,10 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
         println!("no information available.");
     }
 
-    page::KERNEL_PAGE_TABLE.dump();
+    unsafe {
+    let page_table = page::KERNEL_PAGE_TABLE.get();
+    page_table.as_ref().expect("Failed to get page table").dump();
+    }
 
     loop {
         unsafe {
