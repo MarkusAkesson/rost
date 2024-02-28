@@ -1,4 +1,3 @@
-use core::iter::Iterator;
 use core::num::Wrapping;
 
 pub struct XorShift {

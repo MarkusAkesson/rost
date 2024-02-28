@@ -5,6 +5,8 @@
 // PCIE: 32..35
 //
 
+use core::ptr::addr_of_mut;
+
 use crate::arch::riscv::thread_pointer;
 
 use log::info;
@@ -188,7 +190,7 @@ impl Plic {
 static mut _PLIC: Plic = Plic::new();
 
 pub fn plic() -> &'static mut Plic {
-    unsafe { &mut _PLIC }
+    unsafe { addr_of_mut!(_PLIC).as_mut().unwrap() }
 }
 
 /// Initiate PLIC

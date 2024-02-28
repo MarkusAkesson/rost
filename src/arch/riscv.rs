@@ -1,7 +1,5 @@
 use crate::page::PAGE_SIZE;
 
-use riscv;
-
 use core::arch::asm;
 use core::time::Duration;
 
