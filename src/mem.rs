@@ -1,4 +1,5 @@
 use crate::arch;
+use crate::clint::{CLINT_BASE, CLINT_SIZE};
 use crate::page::{self, Attribute, PageTable, KERNEL_PAGE_TABLE};
 use crate::plic::PLIC_BASE;
 use crate::symbols::*;
@@ -18,7 +19,10 @@ pub struct Region {
 impl Region {
     pub fn new(start: usize, end: usize, flags: Attribute, name: &'static str) -> Self {
         Self {
-            start, end, flags, name
+            start,
+            end,
+            flags,
+            name,
         }
     }
 
@@ -57,12 +61,7 @@ pub unsafe fn init() {
         //    Attribute::ReadExecute,
         //    "RODATA",
         //),
-        Region::new(
-            TEXT_START(),
-            RODATA_START(),
-            Attribute::ReadExecute,
-            "Text",
-        ),
+        Region::new(TEXT_START(), RODATA_START(), Attribute::ReadExecute, "Text"),
         Region::new(BSS_START(), BSS_END(), Attribute::ReadWrite, "BSS"),
         Region::new(
             KERNEL_STACK_END(),
@@ -83,6 +82,12 @@ pub unsafe fn init() {
             Attribute::ReadWrite,
             "PLIC_BASE",
         ),
+        Region::new(
+            CLINT_BASE,
+            CLINT_BASE + CLINT_SIZE,
+            Attribute::ReadWrite,
+            "CLINT",
+        ),
     ];
 
     info!("Mapping the kernel");
@@ -93,9 +98,9 @@ pub fn enable_mmu() {
     info!("Enabling mmu");
     unsafe {
         let root_ppn = KERNEL_PAGE_TABLE.get() as *const _ as usize;
-    
+
         let satp_val = arch::riscv::build_satp(8, 0, root_ppn);
-            asm!("csrw satp, {}", in(reg) satp_val);
-            riscv::asm::sfence_vma(0, 0);
+        asm!("csrw satp, {}", in(reg) satp_val);
+        riscv::asm::sfence_vma(0, 0);
     }
 }

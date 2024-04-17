@@ -26,17 +26,18 @@ pub fn uptime() -> Duration {
     Duration::from_nanos(time as u64 * 100)
 }
 
-fn time() -> usize {
-    unsafe {
-        return core::ptr::read_volatile((offset::BASE + offset::MTIME) as *const usize)
-    }
+pub fn time() -> usize {
+    unsafe { return core::ptr::read_volatile((offset::BASE + offset::MTIME) as *const usize) }
 }
 
 pub fn set_time(timer_val: usize) {
     let hart_id = thread_pointer();
 
     unsafe {
-        return core::ptr::write_volatile((offset::BASE + offset::MTIMECMP + hart_id) as *mut usize, timer_val)
+        return core::ptr::write_volatile(
+            (offset::BASE + offset::MTIMECMP + hart_id) as *mut usize,
+            timer_val,
+        );
     }
 }
 

@@ -103,7 +103,10 @@ extern "C" fn machine_trap() {
             ),
             _ => panic!(
                 "Unhandled sync trap {}. CPU#{} -> 0x{:08x}: 0x{:08x}",
-                cause.code(), hart, epc, tval
+                cause.code(),
+                hart,
+                epc,
+                tval
             ),
         }
     }
@@ -115,6 +118,7 @@ extern "C" fn machine_trap() {
     register::sepc::write(epc);
     unsafe {
         asm!("csrw sstatus, {}", in(reg) sstatus_bits);
+        register::sip::clear_ssoft();
     }
 }
 
@@ -130,7 +134,6 @@ pub unsafe fn enable_interrupts() {
     register::sie::set_ssoft();
     register::sie::set_sext();
 }
-
 
 /// Hart init
 ///
@@ -218,5 +221,40 @@ _start_trap:
     addi sp, sp, 256
 
     sret
+"#
+);
+
+global_asm!(
+    r#"
+.global timervec
+.align 4
+timervec:
+    # scratch[0, 8, 16] : register save area
+    # scratch[24] : address of MTIMECMP
+    # scratch[32] : desired interval between interrupts
+
+    csrrw a0, mscratch, a0
+    sd a1, 0(a0)
+    sd a2, 8(a0)
+    sd a3, 16(a0)
+
+    # schedule next timer interrupt
+    # this is done by adding `interval` to mtimecmp
+    ld a1, 24(a0) # MTIMECMP current hart
+    ld a2, 32(a0) # interval
+    ld a3, 0(a1)
+    add a3, a3, a2
+    sd a3, 0(a1)
+
+    # raise supervisor software interrupt
+    li a1, 2
+    csrw sip, a1
+
+    ld a3, 16(a0)
+    ld a2, 8(a0)
+    ld a1, 0(a0)
+    csrrw a0, mscratch, a0
+
+    mret
 "#
 );

@@ -1,15 +1,16 @@
 #![no_std]
 #![no_main]
 
-use core::sync::atomic::{AtomicBool, Ordering};
 use core::arch::global_asm;
+use core::sync::atomic::{AtomicBool, Ordering};
 
+use rost::arch;
+use rost::clint;
 use rost::klog;
 use rost::mem;
 use rost::plic;
 use rost::trap;
 use rost::uart;
-use rost::arch;
 
 use log::{info, LevelFilter};
 
@@ -29,14 +30,17 @@ global_asm!(
 .global goto_supervised
 .align 4
 goto_supervised:
-    csrw satp, zero
+    csrw satp, zero # Disable paging
     csrw pmpcfg0, 0xF
     li t0, 0xffff
+    # Delegate interrupts to supervisor mode
     csrw medeleg, t0
     li t0, 0xffff
     csrw mideleg, t0
+    # Save hart id
     csrr a1, mhartid
     mv tp, a1
+    # Switch to supervisor mode
     mret
 "#
 );
@@ -58,8 +62,9 @@ unsafe fn kinit() -> ! {
         mem::enable_mmu();
         trap::hartinit();
         plic::hartinit();
+        clint::timer_init();
     }
-    
+
     info!("Jumping to supervisor mode");
 
     mstatus::set_mpp(mstatus::MPP::Supervisor);
@@ -77,9 +82,9 @@ unsafe fn kinit() -> ! {
 #[no_mangle]
 unsafe fn kmain() -> ! {
     info!("Initiating hart:{}", arch::riscv::thread_pointer());
-    if  arch::riscv::thread_pointer() == 0 {
+    if arch::riscv::thread_pointer() == 0 {
         // Release the other HARTs
-        //BOOT.store(true, Ordering::Relaxed);main
+        // BOOT.store(true, Ordering::Relaxed);
     } else {
         while !BOOT.load(Ordering::Relaxed) {
             rost::arch::riscv::wait();
@@ -90,9 +95,12 @@ unsafe fn kmain() -> ! {
     trap::enable_interrupts();
 
     info!("hart #{} ready", arch::riscv::thread_pointer());
+    clint::debug();
 
     loop {
-        rost ::arch::riscv::wait();
+        info!("{:?}", sip::read());
+        clint::debug();
+        rost::arch::riscv::wait();
     }
 }
 
@@ -108,4 +116,3 @@ fn hartinit() {
         trap::hartinit();
     }
 }
-

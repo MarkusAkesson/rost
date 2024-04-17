@@ -1,12 +1,13 @@
+use crate::clint;
 use crate::plic::{self, InterruptId};
 use crate::uart::uart_interrupt;
 
-use log::error;
+use riscv::register;
+
+use log::{debug, error};
 
 /// Handle an interrupt from PLIC
 ///
-/// Cause if the scause code.
-
 fn plic_interrupt() {
     let plic = plic::plic();
     if let Some(id) = plic.next() {
@@ -19,7 +20,16 @@ fn plic_interrupt() {
 }
 
 fn timer_interrupt() {
-    error!("timer interrupt not implemented");
+    debug!("Tick");
+    unsafe {
+        debug!("{:?}", register::sip::Sip::stimer(&register::sip::read()));
+        debug!("{:?}", register::sip::Sip::ssoft(&register::sip::read()));
+        register::sip::clear_ssoft();
+        debug!("{:?}", register::sip::read());
+        debug!("{:?}", register::sip::Sip::stimer(&register::sip::read()));
+        debug!("{:?}", register::sip::Sip::ssoft(&register::sip::read()));
+        clint::debug();
+    };
 }
 
 #[no_mangle]

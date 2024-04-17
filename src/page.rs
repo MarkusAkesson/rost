@@ -1,10 +1,10 @@
+use crate::mem::Region;
 use crate::symbols::{HEAP_SIZE, HEAP_START};
 use crate::{print, println};
-use crate::mem::Region;
 
+use core::cell::SyncUnsafeCell;
 use core::mem::size_of;
 use core::ptr::null_mut;
-use core::cell::SyncUnsafeCell;
 
 use log::{info, warn};
 
@@ -81,7 +81,7 @@ pub fn zalloc(pages: usize) -> *mut u8 {
         let len = (PAGE_SIZE * pages) / 8;
         let slice = unsafe { core::slice::from_raw_parts_mut(ptr as *mut u64, len) };
         slice.iter_mut().for_each(|ptr| *ptr = 0);
-    } 
+    }
     ptr
 }
 
@@ -347,7 +347,13 @@ impl PageTable {
     }
 
     pub fn id_map_range(&mut self, region: &Region) {
-        info!("\t{}: {:X}->{:X} ({})",region.name(), region.start_addr(), region.end_addr(), region.len());
+        info!(
+            "\t{}: {:X}->{:X} ({})",
+            region.name(),
+            region.start_addr(),
+            region.end_addr(),
+            region.len()
+        );
         let mut memaddr = align_val_down(region.start_addr(), PAGE_ORDER);
         let num_pages = (align_val(region.end_addr(), PAGE_ORDER) - memaddr) / PAGE_SIZE;
         (0..num_pages).for_each(|_| {
@@ -356,7 +362,7 @@ impl PageTable {
         });
     }
 
-    pub fn id_map_ranges<'a, I>(&mut self, arr: I) 
+    pub fn id_map_ranges<'a, I>(&mut self, arr: I)
     where
         I: Iterator<Item = &'a Region>,
     {
@@ -377,7 +383,7 @@ impl PageTable {
 
     pub fn mark(&mut self, start: usize, end: usize, flags: usize) {
         let mut memaddr = align_val(start, PAGE_ORDER);
-        let mut start = unsafe { start & !(PAGE_ALLOC_START- 1) };
+        let mut start = unsafe { start & !(PAGE_ALLOC_START - 1) };
 
         let pages = (align_val(end, 12) - memaddr) / PAGE_ORDER;
 
@@ -449,7 +455,9 @@ impl PageTable {
 
                 let table = v.physical_addr().0 as *const Self;
                 let table = unsafe { table.as_ref().unwrap() };
-                table._dump(level - 1, (vpn << 9) | i);
+                if level != 0 {
+                    table._dump(level - 1, (vpn << 9) | i);
+                }
             }
         }
     }

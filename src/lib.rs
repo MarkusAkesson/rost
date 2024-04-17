@@ -3,6 +3,7 @@
 #![feature(sync_unsafe_cell)]
 
 pub mod arch;
+pub mod clint;
 pub mod interrupt;
 pub mod klog;
 pub mod mem;
@@ -26,11 +27,6 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
         );
     } else {
         println!("no information available.");
-    }
-
-    unsafe {
-    let page_table = page::KERNEL_PAGE_TABLE.get();
-    page_table.as_ref().expect("Failed to get page table").dump();
     }
 
     loop {
