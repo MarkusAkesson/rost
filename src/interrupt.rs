@@ -16,6 +16,7 @@ fn plic_interrupt() {
     }
 }
 
+/// Handle a software timer interrupt
 fn timer_interrupt() {
     debug!("Tick");
     unsafe {
@@ -23,6 +24,10 @@ fn timer_interrupt() {
     };
 }
 
+/// Handle a external interrupt
+///
+/// Either a plic interrupt or a timer interrupt forwarded from
+/// machine mode
 #[no_mangle]
 pub fn handle_interrupt(code: u32) {
     match code {
