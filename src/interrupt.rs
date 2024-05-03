@@ -1,13 +1,10 @@
-use crate::clint;
+use crate::arch::riscv;
 use crate::plic::{self, InterruptId};
 use crate::uart::uart_interrupt;
-
-use riscv::register;
 
 use log::{debug, error};
 
 /// Handle an interrupt from PLIC
-///
 fn plic_interrupt() {
     let plic = plic::plic();
     if let Some(id) = plic.next() {
@@ -22,13 +19,7 @@ fn plic_interrupt() {
 fn timer_interrupt() {
     debug!("Tick");
     unsafe {
-        debug!("{:?}", register::sip::Sip::stimer(&register::sip::read()));
-        debug!("{:?}", register::sip::Sip::ssoft(&register::sip::read()));
-        register::sip::clear_ssoft();
-        debug!("{:?}", register::sip::read());
-        debug!("{:?}", register::sip::Sip::stimer(&register::sip::read()));
-        debug!("{:?}", register::sip::Sip::ssoft(&register::sip::read()));
-        clint::debug();
+        riscv::clear_sie_ssoft();
     };
 }
 

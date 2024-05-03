@@ -31,9 +31,9 @@ global_asm!(
 .align 4
 goto_supervised:
     csrw satp, zero # Disable paging
-    csrw pmpcfg0, 0xF
-    li t0, 0xffff
+    csrw pmpcfg0, 0xf
     # Delegate interrupts to supervisor mode
+    li t0, 0xffff
     csrw medeleg, t0
     li t0, 0xffff
     csrw mideleg, t0
@@ -98,8 +98,6 @@ unsafe fn kmain() -> ! {
     clint::debug();
 
     loop {
-        info!("{:?}", sip::read());
-        clint::debug();
         rost::arch::riscv::wait();
     }
 }

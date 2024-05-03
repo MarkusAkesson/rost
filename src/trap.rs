@@ -3,7 +3,7 @@ use crate::interrupt;
 
 use core::arch::{asm, global_asm};
 
-use log::{info, warn};
+use log::info;
 use riscv::register;
 
 #[derive(Debug, Copy, Clone)]
@@ -48,7 +48,7 @@ extern "C" fn machine_trap() {
     }
 
     if status.spp() != register::sstatus::SPP::Supervisor {
-        warn!("not from supervisor mode,  hart {}", hart);
+        panic!("not from supervisor mode,  hart {}", hart);
     }
 
     unsafe {
@@ -118,7 +118,6 @@ extern "C" fn machine_trap() {
     register::sepc::write(epc);
     unsafe {
         asm!("csrw sstatus, {}", in(reg) sstatus_bits);
-        register::sip::clear_ssoft();
     }
 }
 
@@ -133,6 +132,7 @@ pub unsafe fn enable_interrupts() {
     // enable software interrupt
     register::sie::set_ssoft();
     register::sie::set_sext();
+    register::sie::set_stimer();
 }
 
 /// Hart init
@@ -247,7 +247,7 @@ timervec:
     sd a3, 0(a1)
 
     # raise supervisor software interrupt
-    li a1, 2
+    li a1, 0x02
     csrw sip, a1
 
     ld a3, 16(a0)
