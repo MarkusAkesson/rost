@@ -2,7 +2,7 @@ use crate::arch::riscv;
 use crate::plic::{self, InterruptId};
 use crate::uart::uart_interrupt;
 
-use log::{debug, error};
+use log::error;
 
 /// Handle an interrupt from PLIC
 fn plic_interrupt() {
@@ -18,7 +18,6 @@ fn plic_interrupt() {
 
 /// Handle a software timer interrupt
 fn timer_interrupt() {
-    debug!("Tick");
     unsafe {
         riscv::clear_sie_ssoft();
     };
