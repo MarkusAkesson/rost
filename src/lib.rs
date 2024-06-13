@@ -19,19 +19,12 @@ pub mod uart;
 fn panic(info: &core::panic::PanicInfo) -> ! {
     println!("hart {} aborting: ", arch::riscv::thread_pointer());
     if let Some(p) = info.location() {
-        println!(
-            "line {}, file {}: {}",
-            p.line(),
-            p.file(),
-            info.message().unwrap()
-        );
+        println!("line {}, file {}: {}", p.line(), p.file(), info.message());
     } else {
         println!("no information available.");
     }
 
     loop {
-        unsafe {
-            riscv::asm::wfi();
-        }
+        riscv::asm::wfi();
     }
 }
